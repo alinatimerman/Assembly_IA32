@@ -1,0 +1,81 @@
+     1                                  bits 32 ; assembling for the 32 bits architecture
+     2                                  
+     3                                  ; declare the EntryPoint (a label defining the very first instruction of the program)
+     4                                  global start        
+     5                                  
+     6                                  ; declare external functions needed by our program
+     7                                  extern exit               ; tell nasm that exit exists even if we won't be defining it
+     8                                  import exit msvcrt.dll    ; exit is a function that ends the calling process. It is defined in msvcrt.dll
+     9                                                            ; msvcrt.dll contains exit, printf and all the other important C-runtime specific functions
+    10                                  
+    11                                  ; our data is declared here (the variables needed by our program)
+    12                                  segment data use32 class=data
+    13                                  ;Se dau 2 siruri de octeti A si B. Sa se construiasca sirul R care sa contina doar elementele pare si negative din cele 2 siruri.  
+    14                                  ;Exemplu: 
+    15                                      ;A: 2, 1, 3, -3, -4, 2, -6 
+    16                                      ;B: 4, 5, -5, 7, -6, -2, 1 
+    17                                      ;R: -4, -6, -6, -2 
+    18                                      
+    19 00000000 020103FDFC02FA              a db 2, 1, 3, -3, -4, 2, -6
+    20                                      len_a equ $-a
+    21 00000007 0405FB07FAFE01              b db 4, 5, -5, 7, -6, -2, 1 
+    22                                      len_b equ $-b
+    23 0000000E FF<rept>                    r times (len_a+len_b) db -1
+    24                                  
+    25                                  ; our code starts here
+    26                                  segment code use32 class=code
+    27                                      start:
+    28 00000000 FC                              cld
+    29 00000001 B907000000                      mov ecx, len_a ;pregatim in ecx lungimea sirului a/b pentru loop
+    30 00000006 BE00000000                      mov esi, 0 ;registru contor pentru parcurgerea sirului a/b 
+    31 0000000B BF[0E000000]                    mov edi, r ;registru contor pentru parcurgerea sirului rezultat r
+    32                                          
+    33                                          ;accesam element cu element din sirul a/b verificam daca e negativ si par, afirmativ => adaugam in sir rezultat r
+    34                                          Repeta_a:
+    35 00000010 8A86[00000000]                      mov al, [a + esi]
+    36 00000016 3C00                                cmp al, 0
+    37 00000018 7C02                                jl negativ_a
+    38 0000001A 7D14                                jge nu_adauga_a
+    39                                  
+    40                                              negativ_a:
+    41 0000001C 6698                                    cbw 
+    42 0000001E B302                                    mov bl, 2
+    43 00000020 F6FB                                    idiv bl  ;in al-cat si ah-rest
+    44 00000022 80FC00                                  cmp ah, 0
+    45 00000025 7402                                    je par_a
+    46 00000027 7507                                    jne nu_adauga_a
+    47                                  
+    48                                                      par_a:
+    49 00000029 8A86[00000000]                                  mov al, [a + esi]
+    50 0000002F AA                                              stosb
+    51                                              nu_adauga_a:
+    52 00000030 46                                      inc esi
+    53 00000031 E2DD                            loop Repeta_a
+    54                                          
+    55                                          
+    56 00000033 B907000000                      mov ecx, len_b ;pregatim in ecx lungimea sirului a/b pentru loop
+    57 00000038 BE00000000                      mov esi, 0 ;registru contor pentru parcurgerea sirului a/b 
+    58                                  
+    59                                          Repeta_b:
+    60 0000003D 8A86[07000000]                      mov al, [b + esi]
+    61 00000043 3C00                                cmp al, 0
+    62 00000045 7C02                                jl negativ_b
+    63 00000047 7D14                                jge nu_adauga_b
+    64                                  
+    65                                              negativ_b:
+    66 00000049 6698                                    cbw 
+    67 0000004B B302                                    mov bl, 2
+    68 0000004D F6FB                                    idiv bl  ;in al-cat si ah-rest
+    69 0000004F 80FC00                                  cmp ah, 0
+    70 00000052 7402                                    je par_b
+    71 00000054 7507                                    jne nu_adauga_b
+    72                                  
+    73                                                      par_b:
+    74 00000056 8A86[07000000]                                  mov al, [b + esi]
+    75 0000005C AA                                              stosb
+    76                                              nu_adauga_b:
+    77 0000005D 46                                      inc esi
+    78 0000005E E2DD                            loop Repeta_b
+    79                                          ; exit(0)
+    80 00000060 6A00                            push    dword 0      ; push the parameter for exit onto the stack
+    81 00000062 FF15[00000000]                  call    [exit]       ; call exit to terminate the program
