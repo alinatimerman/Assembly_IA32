@@ -1,0 +1,53 @@
+     1                                  bits 32 ; assembling for the 32 bits architecture
+     2                                  
+     3                                  ; declare the EntryPoint (a label defining the very first instruction of the program)
+     4                                  global start        
+     5                                  
+     6                                  ; declare external functions needed by our program
+     7                                  extern exit               ; tell nasm that exit exists even if we won't be defining it
+     8                                  import exit msvcrt.dll    ; exit is a function that ends the calling process. It is defined in msvcrt.dll
+     9                                                            ; msvcrt.dll contains exit, printf and all the other important C-runtime specific functions
+    10                                  
+    11                                  ; our data is declared here (the variables needed by our program)
+    12                                  segment data use32 class=data
+    13                                  
+    14                                  ;Se da un sir A de dwords 
+    15                                  ;Construiti doua siruri de octeti
+    16                                      ;B1: contine ca elemente partea inferioara a cuvintelor inferioare din A 
+    17                                      ;B2: contine ca elemente partea superioara a cuvintelor superioare din A  
+    18                                  
+    19 00000000 443322114D3C2B1A            a dd 11223344h, 1A2B3C4Dh     ; in memory: 44 | 33 | 22 | 11 | 4D | 3C | 2B | 1A
+    20                                                                               ; s+0  s+1  s+2  s+3  s+4  s+5  s+6  s+7
+    21                                      len_a equ ($-a)/4
+    22 00000008 FF<rept>                    b1 times len_a db -1    ;b1 = 44, 4D
+    23 0000000A FF<rept>                    b2 times len_a db -1    ;b2 = 11, 1A
+    24                                      
+    25                                  ; our code starts here
+    26                                  segment code use32 class=code
+    27                                      start:
+    28                                          ;b1
+    29 00000000 B902000000                      mov ecx, len_a   ; pentru loop
+    30 00000005 BE00000000                      mov esi, 0      ;primul elem pe care il vrem in b1
+    31 0000000A BF00000000                      mov edi, 0
+    32                                          
+    33                                          repeta_b1:
+    34 0000000F 8A86[00000000]                      mov al, [a + esi]
+    35 00000015 8887[08000000]                      mov [b1 + edi], al
+    36 0000001B 83C604                              add esi, 4
+    37 0000001E 83C701                              add edi, 1
+    38 00000021 E2EC                            loop repeta_b1
+    39                                          
+    40                                          ;b2
+    41 00000023 B902000000                      mov ecx, len_a  ; pentru loop
+    42 00000028 BE03000000                      mov esi, 3      ;prmiul elem pe care il vrem in b2
+    43 0000002D BF00000000                      mov edi, 0
+    44                                          repeta_b2:
+    45 00000032 8A86[00000000]                      mov al, [a + esi]
+    46 00000038 8887[0A000000]                      mov [b2 + edi], al
+    47 0000003E 83C604                              add esi, 4
+    48 00000041 83C701                              add edi, 1
+    49 00000044 E2EC                            loop repeta_b2
+    50                                          
+    51                                          ; exit(0)
+    52 00000046 6A00                            push    dword 0      ; push the parameter for exit onto the stack
+    53 00000048 FF15[00000000]                  call    [exit]       ; call exit to terminate the program
